@@ -56,10 +56,10 @@ export default function App() {
       className="min-h-screen bg-slate-50 font-sans text-slate-800 bg-cover bg-center bg-no-repeat bg-fixed"
       style={{ backgroundImage: `url(${pigierCampus})` }}
     >
-      <div className="min-h-screen bg-slate-900/60 backdrop-blur-[3px]">
-        {/* Navigation / Header */}
-        <Header isAuthenticated={isAuthenticated} onLogout={handleLogoutClick} />
+      {/* Navigation / Header */}
+      <Header isAuthenticated={isAuthenticated} onLogout={handleLogoutClick} />
 
+      <div className="min-h-screen bg-slate-900/60 backdrop-blur-[3px]">
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-12">
           <Routes>
           <Route path="/" element={<Navigate to="/student" replace />} />

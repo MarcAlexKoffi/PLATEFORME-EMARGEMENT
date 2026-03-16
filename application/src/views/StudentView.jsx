@@ -5,7 +5,7 @@ import SignaturePad from '../components/SignaturePad';
 import Modal from '../components/Modal';
 
 const StudentView = () => {
-  const { exams, addSignature, signatures, majors } = useAttendance();
+  const { exams, addSignature, signatures, majors, isConfirmationActive } = useAttendance();
   const [studentForm, setStudentForm] = useState({
     lastname: '',
     firstname: '',
@@ -82,7 +82,7 @@ const StudentView = () => {
       examId: selectedExam.id,
       examName: `${selectedExam.subject} (${selectedExam.session})`,
       signatureUrl: studentForm.signatureData,
-      timestamp: new Date().toLocaleString()
+      timestamp: new Date().toISOString()
     };
 
     addSignature(newRecord);
@@ -264,10 +264,15 @@ const StudentView = () => {
           <div className="pt-6 border-t border-slate-100">
             <button
               type="submit"
-              className="relative w-full flex justify-center items-center py-4 px-6 border-0 rounded-lg shadow-xl text-base font-bold text-white bg-gradient-to-br from-[#003366] to-[#0055aa] hover:from-[#002244] hover:to-[#004488] transform hover:-translate-y-0.5 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#003366] mt-4"
+              disabled={!isConfirmationActive}
+              className={`relative w-full flex justify-center items-center py-4 px-6 border-0 rounded-lg shadow-xl text-base font-bold text-white transition-all duration-200 mt-4 
+                ${!isConfirmationActive 
+                  ? 'bg-slate-400 cursor-not-allowed opacity-70' 
+                  : 'bg-gradient-to-br from-[#003366] to-[#0055aa] hover:from-[#002244] hover:to-[#004488] transform hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#003366]'
+                }`}
             >
-              <div className="absolute inset-0 bg-white/10 rounded-lg opacity-0 hover:opacity-100 transition-opacity"></div>
-              Confirmer ma présence
+              <div className={`absolute inset-0 bg-white/10 rounded-lg opacity-0 transition-opacity ${isConfirmationActive ? 'hover:opacity-100' : ''}`}></div>
+              {isConfirmationActive ? "Confirmer ma présence" : "Émargement clôturé"}
             </button>
             <p className="text-xs text-center text-slate-500 mt-4 leading-relaxed font-medium">
               En cliquant sur "Confirmer", vous certifiez sur l'honneur être l'auteur de cette signature. L'adresse IP et l'horodatage sont enregistrés.

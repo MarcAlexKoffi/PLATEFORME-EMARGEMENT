@@ -31,6 +31,11 @@ export const AttendanceProvider = ({ children }) => {
     ];
   });
 
+  const [isConfirmationActive, setIsConfirmationActive] = useState(() => {
+    const savedState = localStorage.getItem('isConfirmationActive');
+    return savedState ? JSON.parse(savedState) : true;
+  });
+
   // --- PERSISTANCE ---
   // Sauvegarder dans le localStorage à chaque changement
   useEffect(() => {
@@ -44,6 +49,10 @@ export const AttendanceProvider = ({ children }) => {
   useEffect(() => {
     localStorage.setItem('majors', JSON.stringify(majors));
   }, [majors]);
+
+  useEffect(() => {
+    localStorage.setItem('isConfirmationActive', JSON.stringify(isConfirmationActive));
+  }, [isConfirmationActive]);
 
   // --- ACTIONS ---
   const addSignature = (newRecord) => {
@@ -86,11 +95,16 @@ export const AttendanceProvider = ({ children }) => {
     return signatures.filter(s => s.examId === examId);
   };
 
+  const toggleConfirmation = () => {
+    setIsConfirmationActive(prev => !prev);
+  };
+
   // Valeurs exposées par le Context
   const value = {
     exams,
     signatures,
     majors,
+    isConfirmationActive, // Nouvel état
     addSignature,
     addExam,
     deleteExam,
@@ -98,7 +112,8 @@ export const AttendanceProvider = ({ children }) => {
     deleteMajor,
     updateSignature,
     resetAllData,
-    getSignaturesByExam
+    getSignaturesByExam,
+    toggleConfirmation // Nouvelle fonction
   };
 
   return (

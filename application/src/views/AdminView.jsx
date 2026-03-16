@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { List, Download, Calendar, Plus, Filter, BookOpen, Trash2, CheckCircle, AlertTriangle, Users, FileText, Search, RotateCcw, GraduationCap, Edit } from 'lucide-react';
+import { List, Download, Calendar, Plus, Filter, BookOpen, Trash2, CheckCircle, AlertTriangle, Users, FileText, Search, RotateCcw, GraduationCap, Edit, Lock } from 'lucide-react';
 import { useAttendance } from '../context/AttendanceContext';
 import Modal from '../components/Modal';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import pigierLogo from '../assets/logo_pigier.png';
 
 const AdminView = () => {
-  const { exams, signatures, majors, addExam, deleteExam, addMajor, deleteMajor, resetAllData, updateSignature } = useAttendance();
+  const { exams, signatures, majors, addExam, deleteExam, addMajor, deleteMajor, resetAllData, updateSignature, isConfirmationActive, toggleConfirmation } = useAttendance();
   const [newExamForm, setNewExamForm] = useState({
     subject: '',
     semester: 'S1',
@@ -104,59 +105,151 @@ const AdminView = () => {
 
   const handleExportPDF = () => {
     try {
-      const doc = new jsPDF();
+      const doc = new jsPDF('landscape');
+      const pageWidth = doc.internal.pageSize.width;
+      const pageHeight = doc.internal.pageSize.height;
       
-      // Titre
-      doc.setFontSize(20);
-      doc.setTextColor(40);
-      doc.text("Feuille d'Émargement - EduSign", 14, 22);
+      // --- EN-TÊTE ---
+      // Logo (s'il est chargé)
+      try {
+        const logoWidth = 40; 
+        const logoHeight = 15; // Ajuster selon le ratio du logo réel
+        doc.addImage(pigierLogo, 'PNG', 14, 10, logoWidth, logoHeight);
+      } catch (e) {
+        console.warn("Logo non chargé", e);
+      }
 
-      // Infos Filtre
-      doc.setFontSize(11);
+      // Titre Principal
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(18);
+      doc.setTextColor(0, 51, 102); // Bleu Pigier
+      doc.text("FEUILLE D'ÉMARGEMENT", pageWidth / 2, 20, { align: 'center' });
+      
+      // Sous-titre
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
       doc.setTextColor(100);
-      let subtitle = "Toutes les épreuves";
+      doc.text("Année Académique 2025-2026", pageWidth / 2, 26, { align: 'center' });
+
+      // Info date à droite
+      doc.setFontSize(8);
+      doc.setTextColor(120);
+      doc.text(`Généré le: ${new Date().toLocaleString('fr-FR')}`, pageWidth - 14, 15, { align: 'right' });
+
+      // Ligne de séparation
+      doc.setDrawColor(200);
+      doc.setLineWidth(0.5);
+      doc.line(14, 32, pageWidth - 14, 32);
+
+      // --- INFO CONTEXTE ---
+      let yPos = 42;
+      doc.setFontSize(11);
+      doc.setTextColor(60);
+      
+      let filterText = "Tous les examens";
       if (adminFilter !== 'all') {
         const exam = exams.find(e => e.id === adminFilter);
-        if (exam) subtitle = `${exam.subject} - ${exam.semester} (${exam.session})`;
+        if (exam) filterText = `${exam.subject} (${exam.session}) - ${exam.semester}`;
       }
-      doc.text(`Filtre : ${subtitle}`, 14, 32);
-      doc.text(`Date d'export : ${new Date().toLocaleString()}`, 14, 38);
+      
+      doc.setFont('helvetica', 'bold');
+      doc.text("Épreuve : ", 14, yPos);
+      doc.setFont('helvetica', 'normal');
+      doc.text(filterText, 35, yPos);
 
-      // Données (filtrées par épreuve uniquement pour le PDF, la recherche est visuelle)
+      // Données
       const pdfSignatures = signatures.filter(s => adminFilter === 'all' || s.examId === adminFilter);
       
-      // Tableau
+      // --- TABLEAU ---
       autoTable(doc, {
-        startY: 45,
-        head: [['Date', 'Table', 'Nom & Prénoms', 'Matricule', 'Filière', 'Classe', 'Épreuve', 'Signature']],
-        body: pdfSignatures.map(sig => [
-          sig.timestamp,
-          sig.tableNumber || '-',
-          sig.name,
-          sig.matricule,
-          sig.major || '-',
-          sig.class || '-',
-          sig.examName,
-          '' // La signature image sera ajoutée manuellement
-        ]),
+        startY: yPos + 8,
+        head: [['Date', 'Matricule', 'Étudiant', 'Filière', 'Classe', 'Épreuve', 'Table', 'Signature']],
+        body: pdfSignatures.map(sig => {
+          const dateObj = new Date(sig.timestamp);
+          const formattedDate = isNaN(dateObj.getTime())
+            ? sig.timestamp
+            : dateObj.toLocaleString('fr-FR', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+              });
+
+          return [
+            formattedDate,
+            sig.matricule,
+            sig.name,
+            sig.major || '-',
+            sig.class || '-',
+            sig.examName,
+            sig.tableNumber || '-',
+            '' // Placeholder image
+          ];
+        }),
+        theme: 'grid',
+        headStyles: { 
+          fillColor: [0, 51, 102], // Bleu Pigier
+          textColor: 255,
+          fontStyle: 'bold',
+          halign: 'center',
+          valign: 'middle'
+        },
+        styles: { 
+          fontSize: 9, 
+          cellPadding: 3, 
+          valign: 'middle', 
+          lineColor: [230, 230, 230],
+          lineWidth: 0.1
+        },
+        columnStyles: {
+          0: { width: 30, halign: 'center' }, // Date
+          1: { width: 30 }, // Matricule
+          2: { }, // Nom auto-expand
+          3: { width: 25, halign: 'center' }, // Filière
+          4: { width: 25, halign: 'center' }, // Classe
+          5: { width: 50 }, // Épreuve
+          6: { width: 20, halign: 'center' }, // Table
+          7: { width: 40, minCellHeight: 15, halign: 'center' } // Signature
+        },
+        alternateRowStyles: {
+          fillColor: [249, 250, 251] // Gris très clair pour alternance
+        },
         didDrawCell: (data) => {
           if (data.section === 'body' && data.column.index === 7) {
             const signatureImg = pdfSignatures[data.row.index].signatureUrl;
             if (signatureImg) {
               try {
-                doc.addImage(signatureImg, 'PNG', data.cell.x + 2, data.cell.y + 2, 20, 10);
+                // Centrer l'image dans la cellule
+                const padding = 2;
+                const cellHeight = data.cell.height - (padding * 2);
+                const cellWidth = data.cell.width - (padding * 2);
+                
+                // Ratio d'aspect pour la signature (souvent 2:1 ou 3:1)
+                const imgWidth = Math.min(cellWidth, cellHeight * 2.5);
+                const imgHeight = imgWidth / 2.5;
+                
+                const x = data.cell.x + (data.cell.width - imgWidth) / 2;
+                const y = data.cell.y + (data.cell.height - imgHeight) / 2;
+
+                doc.addImage(signatureImg, 'PNG', x, y, imgWidth, imgHeight);
               } catch (e) {
-                console.warn('Erreur lors de l\'ajout de l\'image', e);
+                // Silencieux si pas d'image valide
               }
             }
           }
         },
-        styles: { minCellHeight: 15, valign: 'middle', fontSize: 9 }, // fontSize reduced
-        headStyles: { fillColor: [66, 133, 244] }, // Bleu Google/Material
+        // Pied de page avec numérotation
+        didDrawPage: (data) => {
+          const str = 'Page ' + doc.internal.getNumberOfPages();
+          doc.setFontSize(8);
+          doc.setTextColor(150);
+          doc.text(str, pageWidth / 2, pageHeight - 10, { align: 'center' });
+        }
       });
 
-      doc.save(`emargement_${new Date().toISOString().slice(0,10)}.pdf`);
-      setSuccessMessage("Le fichier PDF a été généré et téléchargé.");
+      doc.save(`Emargement_Pigier_${new Date().toISOString().slice(0,10)}.pdf`);
+      setSuccessMessage("La feuille d'émargement a été générée avec succès.");
       setShowSuccessModal(true);
     } catch (error) {
       console.error("Erreur PDF:", error);
@@ -237,6 +330,39 @@ const AdminView = () => {
             <p className="text-2xl font-bold text-slate-800">{totalExams}</p>
           </div>
         </div>
+      </div>
+
+      {/* 0.5 STATUS SESSION */}
+      <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="flex items-center">
+          <div className={`w-12 h-12 rounded-full flex items-center justify-center mr-4 ${isConfirmationActive ? 'bg-green-100' : 'bg-red-100'}`}>
+            {isConfirmationActive ? <CheckCircle className="w-6 h-6 text-green-600"/> : <Lock className="w-6 h-6 text-red-600"/>}
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-slate-800">État de l'émargement</h3>
+            <p className="text-slate-500 text-sm">
+              {isConfirmationActive ? "Les étudiants peuvent émarger." : "Les émargements sont désactivés."}
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={toggleConfirmation}
+          className={`px-6 py-2 rounded-lg font-bold text-white transition-colors flex items-center shadow-md whitespace-nowrap
+              ${isConfirmationActive ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'}
+          `}
+        >
+          {isConfirmationActive ? (
+            <>
+              <Lock className="w-4 h-4 mr-2" />
+              Désactiver l'accès
+            </>
+          ) : (
+            <>
+              <CheckCircle className="w-4 h-4 mr-2" />
+              Activer l'accès
+            </>
+          )}
+        </button>
       </div>
 
       {/* 1. CONFIGURATION (ÉPREUVES & FILIÈRES) */}
