@@ -1,0 +1,39 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // RÈGLES DE SÉCURITÉ
+    // En production, il faudrait être plus strict, mais pour le développement :
+    
+    // 1. Signatures : 
+    // - Tout le monde peut lire (pour la vérification anti-doublon du StudentView)
+    // - Tout le monde peut créer (pour que les étudiants puissent signer)
+    // - Seuls les connectés (Admin) peuvent modifier ou supprimer
+    match /signatures/{document=**} {
+      allow read, create: if true;
+      allow update, delete: if request.auth != null;
+    }
+
+    // 2. Examens, Filières, Config :
+    // - Lecture publique (pour afficher les listes)
+    // - Écriture réservée aux admins connectés
+    match /exams/{document=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    
+    match /majors/{document=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    
+    match /config/{document=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // Règle par défaut pour le reste (bloqué par sécurité)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

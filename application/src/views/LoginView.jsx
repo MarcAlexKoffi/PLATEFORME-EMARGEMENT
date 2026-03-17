@@ -1,18 +1,35 @@
 import React, { useState } from 'react';
-import { ShieldCheck, ArrowRight, AlertTriangle, KeyRound } from 'lucide-react';
+import { ShieldCheck, ArrowRight, AlertTriangle, KeyRound, User } from 'lucide-react';
+import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 
 const LoginView = ({ onLogin }) => {
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Mot de passe "admin" en dur pour l'instant
-    if (password === 'admin123') {
-      onLogin();
-    } else {
-      setError("Mot de passe incorrect. Réessayez.");
-      setPassword('');
+    setError('');
+    setIsLoading(true);
+
+    try {
+      const auth = getAuth();
+      await signInWithEmailAndPassword(auth, email, password);
+      // La redirection sera gérée par le listener onAuthStateChanged dans App.jsx
+      // Mais on appelle quand même onLogin pour la rétrocompatibilité immédiate si besoin
+      if (onLogin) onLogin();
+    } catch (err) {
+      console.error("Login error:", err);
+      let message = "Erreur de connexion. Vérifiez vos identifiants.";
+      if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
+        message = "Email ou mot de passe incorrect.";
+      } else if (err.code === 'auth/too-many-requests') {
+        message = "Trop de tentatives échouées. Veuillez réessayer plus tard.";
+      }
+      setError(message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -39,10 +56,30 @@ const LoginView = ({ onLogin }) => {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-8 relative z-10">
+        <form onSubmit={handleSubmit} className="space-y-6 relative z-10">
           <div className="relative group/input">
             <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2.5 ml-1">
-              Code d'accès
+              Email administrateur
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none transition-colors duration-200 group-focus-within/input:text-[#003366]">
+                <User className="h-5 w-5 text-slate-400" strokeWidth={2} />
+              </div>
+              <input
+                type="email"
+                required
+                className="pl-11 pr-4 w-full py-4 bg-slate-50/50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-[#003366]/10 focus:border-[#003366] transition-all duration-200 outline-none text-slate-800 placeholder-slate-400 font-medium"
+                placeholder="admin@ecole.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoFocus
+              />
+            </div>
+          </div>
+
+          <div className="relative group/input">
+            <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2.5 ml-1">
+              Mot de passe
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none transition-colors duration-200 group-focus-within/input:text-[#003366]">
@@ -50,22 +87,23 @@ const LoginView = ({ onLogin }) => {
               </div>
               <input
                 type="password"
+                required
                 className="pl-11 pr-4 w-full py-4 bg-slate-50/50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-[#003366]/10 focus:border-[#003366] transition-all duration-200 outline-none text-slate-800 placeholder-slate-400 font-bold text-lg tracking-widest"
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                autoFocus
               />
             </div>
           </div>
 
           <button
             type="submit"
-            className="group/btn relative w-full flex justify-center items-center py-4.5 px-6 bg-gradient-to-r from-[#003366] to-[#004080] hover:from-[#002244] hover:to-[#003366] text-white rounded-2xl font-bold text-lg shadow-xl hover:shadow-2xl hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-300 overflow-hidden"
+            disabled={isLoading}
+            className={`group/btn relative w-full flex justify-center items-center py-4.5 px-6 bg-gradient-to-r from-[#003366] to-[#004080] hover:from-[#002244] hover:to-[#003366] text-white rounded-2xl font-bold text-lg shadow-xl hover:shadow-2xl hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-300 overflow-hidden ${isLoading ? 'opacity-70 cursor-wait' : ''}`}
           >
             <span className="relative z-10 flex items-center">
-              Connexion
-              <ArrowRight className="w-5 h-5 ml-2 group-hover/btn:translate-x-1 transition-transform" strokeWidth={2} />
+              {isLoading ? 'Connexion...' : 'Connexion'}
+              {!isLoading && <ArrowRight className="w-5 h-5 ml-2 group-hover/btn:translate-x-1 transition-transform" strokeWidth={2} />}
             </span>
             <div className="absolute inset-0 bg-white/10 opacity-0 group-hover/btn:opacity-100 transition-opacity"></div>
           </button>

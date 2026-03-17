@@ -8,6 +8,7 @@ import Loading from './components/Loading';
 import Modal from './components/Modal';
 import { LogOut } from 'lucide-react';
 import pigierCampus from './assets/pigier_campus.jpeg';
+import { getAuth, onAuthStateChanged, signOut } from 'firebase/auth';
 
 // Route Protégée
 const ProtectedRoute = ({ isAllowed, children }) => {
@@ -24,27 +25,35 @@ export default function App() {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const navigate = useNavigate();
 
-  // Simuler un chargement initial
+  // Écouter les changements d'état de l'authentification
   useEffect(() => {
-    const timer = setTimeout(() => {
+    const auth = getAuth();
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setIsAuthenticated(true);
+      } else {
+        setIsAuthenticated(false);
+      }
       setIsLoading(false);
-    }, 1500);
-    return () => clearTimeout(timer);
-  }, []);
+    });
 
-  const handleLogin = () => {
-    setIsAuthenticated(true);
-    navigate('/admin');
-  };
+    // Nettoyage de l'écouteur
+    return () => unsubscribe();
+  }, [navigate]);
 
   const handleLogoutClick = () => {
     setShowLogoutModal(true);
   };
 
-  const confirmLogout = () => {
-    setIsAuthenticated(false);
-    setShowLogoutModal(false);
-    navigate('/student');
+  const confirmLogout = async () => {
+    try {
+      const auth = getAuth();
+      await signOut(auth);
+      setShowLogoutModal(false);
+      navigate('/student'); // Redirection vers l'espace étudiant (public)
+    } catch (error) {
+      console.error("Erreur lors de la déconnexion:", error);
+    }
   };
 
   if (isLoading) {
@@ -69,7 +78,7 @@ export default function App() {
           />
           <Route 
             path="/login" 
-            element={isAuthenticated ? <Navigate to="/admin" replace /> : <LoginView onLogin={handleLogin} />} 
+            element={isAuthenticated ? <Navigate to="/admin" replace /> : <LoginView />} 
           />
           <Route 
             path="/admin" 
