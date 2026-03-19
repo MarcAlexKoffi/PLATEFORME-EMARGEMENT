@@ -181,7 +181,7 @@ const AdminView = () => {
       // --- TABLEAU ---
       autoTable(doc, {
         startY: yPos + 8,
-        head: [['Date', 'Matricule', 'Étudiant', 'Filière', 'Classe', 'Épreuve', 'Table', 'Signature']],
+        head: [['Date', 'Matricule', 'Étudiant', 'Filière', 'Classe', 'Épreuve', 'Salle', 'Signature']],
         body: pdfSignatures.map(sig => {
           const dateObj = new Date(sig.timestamp);
           const formattedDate = isNaN(dateObj.getTime())
@@ -741,7 +741,7 @@ const AdminView = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">N° Table</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">N° Salle Virtuelle</label>
               <input 
                 type="text" 
                 required
@@ -881,7 +881,7 @@ const AdminView = () => {
               <thead className="bg-slate-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Date & Heure</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Table</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Salle</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Étudiant</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Matricule</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Filière</th>

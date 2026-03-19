@@ -41,6 +41,45 @@ export default function App() {
     return () => unsubscribe();
   }, [navigate]);
 
+  // Gestion de l'inactivité (Déconnexion automatique)
+  useEffect(() => {
+    // Si l'utilisateur n'est pas connecté, on ne fait rien
+    if (!isAuthenticated) return;
+
+    let timeoutId;
+    // Durée d'inactivité avant déconnexion (15 minutes)
+    const INACTIVITY_LIMIT = 15 * 60 * 1000; 
+
+    // Fonction pour réinitialiser le timer
+    const resetTimer = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      
+      timeoutId = setTimeout(() => {
+        const auth = getAuth();
+        signOut(auth).then(() => {
+          // On peut utiliser une alerte simple ou une modale personnalisée
+          alert("Votre session a expiré après une période d'inactivité.");
+          navigate('/student');
+        }).catch((error) => {
+          console.error("Erreur lors de la déconnexion automatique:", error);
+        });
+      }, INACTIVITY_LIMIT);
+    };
+
+    // Initialiser le timer au montage si authentifié
+    resetTimer();
+
+    // Écouter les interactions utilisateur pour réinitialiser le timer
+    const events = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'];
+    events.forEach(event => window.addEventListener(event, resetTimer));
+
+    // Nettoyage lors du démontage ou changement d'état d'auth
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      events.forEach(event => window.removeEventListener(event, resetTimer));
+    };
+  }, [isAuthenticated, navigate]);
+
   const handleLogoutClick = () => {
     setShowLogoutModal(true);
   };

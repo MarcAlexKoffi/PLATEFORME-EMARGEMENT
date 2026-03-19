@@ -144,7 +144,7 @@ const StudentView = () => {
                   type="text"
                   required
                   className="pl-10 w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#003366]/20 focus:border-[#003366] transition-all duration-200 uppercase font-medium placeholder-slate-400"
-                  placeholder="EX: DUPONT"
+                  placeholder="EX: KONAN"
                   value={studentForm.lastname}
                   onChange={(e) => setStudentForm({ ...studentForm, lastname: e.target.value })}
                 />
@@ -167,7 +167,7 @@ const StudentView = () => {
               </div>
             </div>
             <div className="relative">
-              <label className="block text-sm font-semibold text-slate-700 mb-2 ml-1">N° Table <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-semibold text-slate-700 mb-2 ml-1">N° Salle Virtuelle <span className="text-red-500">*</span></label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <Hash className="h-5 w-5 text-slate-400" strokeWidth={1.5} />
@@ -176,7 +176,7 @@ const StudentView = () => {
                   type="text"
                   required
                   className="pl-10 w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#003366]/20 focus:border-[#003366] transition-all duration-200 font-medium placeholder-slate-400"
-                  placeholder="Ex: 12"
+                  placeholder="Ex: Salle 1"
                   value={studentForm.tableNumber}
                   onChange={(e) => setStudentForm({ ...studentForm, tableNumber: e.target.value })}
                 />

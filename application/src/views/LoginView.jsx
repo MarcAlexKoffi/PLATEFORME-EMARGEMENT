@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ShieldCheck, ArrowRight, AlertTriangle, KeyRound, User } from 'lucide-react';
-import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
+import { getAuth, signInWithEmailAndPassword, setPersistence, browserSessionPersistence } from 'firebase/auth';
 
 const LoginView = ({ onLogin }) => {
   const [email, setEmail] = useState('');
@@ -15,6 +15,8 @@ const LoginView = ({ onLogin }) => {
 
     try {
       const auth = getAuth();
+      // Définir la persistance sur SESSION : l'utilisateur sera déconnecté à la fermeture de l'onglet/navigateur
+      await setPersistence(auth, browserSessionPersistence);
       await signInWithEmailAndPassword(auth, email, password);
       // La redirection sera gérée par le listener onAuthStateChanged dans App.jsx
       // Mais on appelle quand même onLogin pour la rétrocompatibilité immédiate si besoin
