@@ -164,6 +164,14 @@ export const AttendanceProvider = ({ children }) => {
     }
   };
 
+  const deleteSignature = async (id) => {
+    try {
+      await deleteDoc(doc(db, 'signatures', id));
+    } catch (error) {
+      console.error("Erreur suppression signature:", error);
+    }
+  };
+
   const resetAllData = async () => {
     try {
       const batch = writeBatch(db);
@@ -230,6 +238,7 @@ export const AttendanceProvider = ({ children }) => {
     deleteExam,
     addMajor,
     deleteMajor,
+    deleteSignature,
     updateSignature,
     resetAllData,
     getSignaturesByExam,

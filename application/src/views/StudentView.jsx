@@ -105,24 +105,24 @@ const StudentView = () => {
   };
 
   return (
-    <div className="max-w-3xl mx-auto bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl overflow-hidden border border-slate-200/60">
-      <div className="bg-gradient-to-r from-[#003366] to-[#004080] p-8 text-white text-center relative overflow-hidden">
+    <div className="max-w-3xl mx-auto bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl overflow-hidden border border-slate-200/60 transition-all duration-300">
+      <div className="bg-gradient-to-r from-[#003366] to-[#004080] p-6 sm:p-8 text-white text-center relative overflow-hidden">
         <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 rounded-full bg-white/5 blur-3xl"></div>
         <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 rounded-full bg-white/5 blur-3xl"></div>
         
-        <h2 className="text-3xl font-bold flex items-center justify-center relative z-10 font-heading tracking-wide">
-          <div className="bg-white/10 p-2 rounded-xl mr-4 shadow-inner border border-white/20">
+        <h2 className="text-2xl sm:text-3xl font-bold flex flex-col sm:flex-row items-center justify-center relative z-10 font-heading tracking-wide">
+          <div className="bg-white/10 p-2 rounded-xl mb-3 sm:mb-0 sm:mr-4 shadow-inner border border-white/20">
             <FileSignature className="w-8 h-8 text-white" strokeWidth={1.5} />
           </div>
           Feuille de Présence
         </h2>
         <p className="mt-3 text-blue-100 font-light text-sm tracking-wide uppercase opacity-90 relative z-10">
-          Veuillez remplir vos informations et signer pour valider votre présence
+          Veuillez remplir vos informations et signer
         </p>
       </div>
 
       {isSubmitted ? (
-        <div className="p-16 flex flex-col items-center justify-center text-center">
+        <div className="p-8 sm:p-16 flex flex-col items-center justify-center text-center">
           <div className="w-24 h-24 bg-green-50 rounded-full flex items-center justify-center mb-6 animate-bounce-short shadow-xl border border-green-100">
             <CheckCircle2 className="w-12 h-12 text-green-600" strokeWidth={2} />
           </div>
@@ -132,8 +132,8 @@ const StudentView = () => {
           </p>
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="p-8 space-y-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-8 space-y-6 sm:space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-x-8 sm:gap-y-6">
             <div className="relative">
               <label className="block text-sm font-semibold text-slate-700 mb-2 ml-1">Nom <span className="text-red-500">*</span></label>
               <div className="relative">

@@ -3,21 +3,63 @@ import { Eraser, Pencil, ImagePlus, MousePointerClick } from 'lucide-react';
 
 const SignaturePad = ({ onSignatureChange }) => {
   const canvasRef = useRef(null);
+  const containerRef = useRef(null);
   const fileInputRef = useRef(null);
   const [mode, setMode] = useState('draw'); // 'draw' | 'upload'
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasContent, setHasContent] = useState(false);
   const [previewUrl, setPreviewUrl] = useState(null);
 
+  // Gestion du redimensionnement du canvas
+  useEffect(() => {
+    const resizeCanvas = () => {
+      if (mode === 'draw' && canvasRef.current && containerRef.current) {
+        const canvas = canvasRef.current;
+        const container = containerRef.current;
+        
+        // Sauvegarder le contenu actuel si possible (souvent perdu lors du resize canvas)
+        const tempCanvas = document.createElement('canvas');
+        const tempCtx = tempCanvas.getContext('2d');
+        tempCanvas.width = canvas.width;
+        tempCanvas.height = canvas.height;
+        if(hasContent) tempCtx.drawImage(canvas, 0, 0);
+
+        // Redimensionner
+        canvas.width = container.offsetWidth;
+        canvas.height = 200; // Hauteur fixe
+
+        // Restaurer le contexte de dessin
+        const ctx = canvas.getContext('2d');
+        ctx.lineWidth = 3;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.strokeStyle = '#1e3a8a';
+        
+        // Tenter de redessiner (simple scaling)
+        if (hasContent && tempCanvas.width > 0) {
+            ctx.drawImage(tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height, 0, 0, canvas.width, canvas.height);
+        }
+      }
+    };
+
+    // Initial resize
+    resizeCanvas();
+    
+    // Add event listener
+    window.addEventListener('resize', resizeCanvas);
+    
+    // Cleanup
+    return () => window.removeEventListener('resize', resizeCanvas);
+  }, [mode, hasContent]); // Re-run when mode changes
+
+  // Re-apply context settings cleanly when mode changes to draw
   useEffect(() => {
     if (mode === 'draw' && canvasRef.current) {
-      const canvas = canvasRef.current;
-      const ctx = canvas.getContext('2d');
-      // Configuration du style de ligne
-      ctx.lineWidth = 3;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      ctx.strokeStyle = '#1e3a8a'; // Bleu foncé
+        const ctx = canvasRef.current.getContext('2d');
+        ctx.lineWidth = 3;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.strokeStyle = '#1e3a8a';
     }
   }, [mode]);
 
@@ -26,9 +68,15 @@ const SignaturePad = ({ onSignatureChange }) => {
     if (!canvas) return { x: 0, y: 0 };
     const rect = canvas.getBoundingClientRect();
     
-    // Support pour mobile (Touch) et Desktop (Mouse)
-    const clientX = event.touches ? event.touches[0].clientX : event.clientX;
-    const clientY = event.touches ? event.touches[0].clientY : event.clientY;
+    let clientX, clientY;
+    
+    if (event.touches && event.touches.length > 0) {
+        clientX = event.touches[0].clientX;
+        clientY = event.touches[0].clientY;
+    } else {
+        clientX = event.clientX;
+        clientY = event.clientY;
+    }
     
     return {
       x: clientX - rect.left,
@@ -39,8 +87,7 @@ const SignaturePad = ({ onSignatureChange }) => {
   const startDrawing = (e) => {
     if (mode !== 'draw') return;
     try {
-      // e.preventDefault(); // Sometimes causes issues with click events if not careful, but needed for drawing
-      if(e.cancelable) e.preventDefault();
+      if (e.cancelable) e.preventDefault();
       
       const { x, y } = getCoordinates(e);
       const ctx = canvasRef.current.getContext('2d');
@@ -54,7 +101,7 @@ const SignaturePad = ({ onSignatureChange }) => {
 
   const draw = (e) => {
     if (!isDrawing || mode !== 'draw') return;
-    if(e.cancelable) e.preventDefault();
+    if (e.cancelable) e.preventDefault(); // Prevent scrolling on mobile
     
     const { x, y } = getCoordinates(e);
     const ctx = canvasRef.current.getContext('2d');
@@ -73,11 +120,10 @@ const SignaturePad = ({ onSignatureChange }) => {
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      // Validation du type de fichier (PNG/JPG uniquement)
       const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
       if (!allowedTypes.includes(file.type)) {
         alert("Format de fichier non supporté. Veuillez utiliser un fichier PNG ou JPG.");
-        e.target.value = ''; // Reset input
+        e.target.value = '';
         return;
       }
 
@@ -115,13 +161,15 @@ const SignaturePad = ({ onSignatureChange }) => {
   const toggleMode = (newMode) => {
     if (mode === newMode) return;
     setMode(newMode);
-    handleReset(); // Reset content when switching modes
+    setHasContent(false);
+    onSignatureChange(null);
+    setPreviewUrl(null);
   };
 
   return (
     <div className="flex flex-col items-center w-full gap-4">
       {/* Onglets de sélection du mode */}
-      <div className="flex bg-slate-100 p-1.5 rounded-xl self-center md:self-start shadow-inner">
+      <div className="flex bg-slate-100 p-1.5 rounded-xl self-center sm:self-start shadow-inner">
         <button 
             type="button"
             onClick={() => toggleMode('draw')}
@@ -140,12 +188,11 @@ const SignaturePad = ({ onSignatureChange }) => {
         </button>
       </div>
 
-      {mode === 'draw' ? (
-        <div className="relative w-full max-w-md border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 overflow-hidden touch-none" style={{ minHeight: '200px' }}>
+      <div ref={containerRef} className="w-full">
+        {mode === 'draw' ? (
+        <div className="relative w-full border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 overflow-hidden touch-none select-none" style={{ height: '200px' }}>
           <canvas
             ref={canvasRef}
-            width={400}
-            height={200}
             className="w-full h-full cursor-crosshair touch-none"
             style={{ touchAction: 'none' }}
             onMouseDown={startDrawing}
@@ -158,12 +205,15 @@ const SignaturePad = ({ onSignatureChange }) => {
           />
           {!hasContent && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none text-gray-400">
-              Signez ici (souris ou doigt)
+              <div className="flex flex-col items-center">
+                  <MousePointerClick className="w-8 h-8 mb-2 opacity-50" />
+                  <span className="text-sm">Signez ici (souris ou doigt)</span>
+              </div>
             </div>
           )}
         </div>
       ) : (
-        <div className="w-full max-w-md h-[200px] border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 flex flex-col items-center justify-center p-4 relative overflow-hidden">
+        <div className="w-full h-[200px] border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 flex flex-col items-center justify-center p-4 relative overflow-hidden">
           {previewUrl ? (
             <img src={previewUrl} alt="Signature importée" className="max-h-full max-w-full object-contain" />
           ) : (
@@ -191,8 +241,9 @@ const SignaturePad = ({ onSignatureChange }) => {
           )}
         </div>
       )}
+      </div>
 
-      <div className="flex justify-end w-full max-w-md">
+      <div className="flex justify-end w-full">
         <button
           type="button"
           onClick={handleReset}

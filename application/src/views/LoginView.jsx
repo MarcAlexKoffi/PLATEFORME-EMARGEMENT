@@ -34,8 +34,8 @@ const LoginView = ({ onLogin }) => {
   };
 
   return (
-    <div className="min-h-[60vh] flex items-center justify-center p-4">
-      <div className="bg-white/80 backdrop-blur-xl p-10 rounded-3xl shadow-2xl border border-white/50 w-full max-w-md relative overflow-hidden group">
+    <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 lg:p-8">
+      <div className="bg-white/80 backdrop-blur-xl p-6 sm:p-10 rounded-3xl shadow-2xl border border-white/50 w-full max-w-md relative overflow-hidden group">
         <div className="absolute top-0 right-0 -mr-20 -mt-20 w-40 h-40 bg-blue-600/10 rounded-full blur-3xl group-hover:bg-blue-600/20 transition-all duration-700"></div>
         <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-40 h-40 bg-indigo-600/10 rounded-full blur-3xl group-hover:bg-indigo-600/20 transition-all duration-700"></div>
 

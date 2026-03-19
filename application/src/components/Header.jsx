@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { GraduationCap, LayoutDashboard, ShieldCheck, Power, UserCircle } from 'lucide-react';
+import { GraduationCap, LayoutDashboard, ShieldCheck, Power, UserCircle, Menu, X } from 'lucide-react';
 import logo from '../assets/logo_pigier.png';
 
 const Header = ({ isAuthenticated, onLogout }) => {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
   const getLinkClass = ({ isActive }) => 
     `group px-4 py-2 bg-transparent rounded-xl font-medium flex items-center transition-all duration-300 ${
       isActive ? 'bg-white/10 text-white shadow-inner border border-white/20' : 'text-slate-100 hover:bg-white/5 hover:text-white'
@@ -11,6 +13,17 @@ const Header = ({ isAuthenticated, onLogout }) => {
 
   const getAdminLinkClass = ({ isActive }) => 
     `group px-4 py-2 rounded-xl font-medium flex items-center transition-all duration-300 ${
+      isActive ? 'bg-amber-500/20 text-amber-100 border border-amber-500/30' : 'text-slate-100 hover:bg-white/5 hover:text-white'
+    }`;
+    
+  // Classes pour le menu mobile
+  const getMobileLinkClass = ({ isActive }) => 
+    `group px-4 py-3 rounded-xl font-medium flex items-center transition-all duration-300 w-full ${
+      isActive ? 'bg-white/10 text-white shadow-inner border border-white/20' : 'text-slate-100 hover:bg-white/5 hover:text-white'
+    }`;
+  
+  const getMobileAdminLinkClass = ({ isActive }) => 
+    `group px-4 py-3 rounded-xl font-medium flex items-center transition-all duration-300 w-full ${
       isActive ? 'bg-amber-500/20 text-amber-100 border border-amber-500/30' : 'text-slate-100 hover:bg-white/5 hover:text-white'
     }`;
 
@@ -24,15 +37,20 @@ const Header = ({ isAuthenticated, onLogout }) => {
               <img src={logo} alt="Logo Pigier" className="relative h-12 w-auto object-contain bg-white rounded-lg p-1.5 shadow-sm" />
             </div>
             <div className="flex flex-col">
-              <span className="font-bold text-lg text-white tracking-wide leading-tight">
+              <span className="font-bold text-lg text-white tracking-wide leading-tight hidden sm:block">
                 CAMPUS EN LIGNE
+              </span>
+               <span className="font-bold text-lg text-white tracking-wide leading-tight sm:hidden">
+                CAMPUS
               </span>
               <span className="text-xs text-blue-200 font-light tracking-widest uppercase">
                 Espace Numérique
               </span>
             </div>
           </div>
-          <div className="flex space-x-3 items-center">
+          
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex space-x-3 items-center">
             <NavLink
               to="/student"
               className={getLinkClass}
@@ -69,13 +87,81 @@ const Header = ({ isAuthenticated, onLogout }) => {
                   className="ml-2 px-4 py-2 rounded-xl font-medium flex items-center transition-all duration-300 text-red-200 hover:text-red-100 hover:bg-red-900/30 border border-transparent hover:border-red-500/30"
                 >
                   <Power className="w-5 h-5 mr-2" strokeWidth={1.5} />
-                  <span className="hidden sm:inline">Déconnexion</span>
+                  <span className="hidden lg:inline">Déconnexion</span>
+                </button>
+              </>
+            )}
+          </div>
+
+          {/* Mobile Menu Button */}
+          <div className="md:hidden flex items-center">
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="p-2 rounded-lg text-slate-200 hover:bg-white/10 focus:outline-none"
+            >
+              {isMobileMenuOpen ? (
+                <X className="w-6 h-6" />
+              ) : (
+                <Menu className="w-6 h-6" />
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile Menu */}
+      {isMobileMenuOpen && (
+        <div className="md:hidden bg-[#003366] border-t border-white/10 animate-in slide-in-from-top-5">
+          <div className="px-4 pt-2 pb-4 space-y-2 shadow-inner">
+            <NavLink
+              to="/student"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className={getMobileLinkClass}
+            >
+              <div className="mr-3 p-1.5 rounded-lg bg-white/10">
+                 <GraduationCap className="w-5 h-5" strokeWidth={1.5} />
+              </div>
+              Espace Étudiant
+            </NavLink>
+            
+            {!isAuthenticated ? (
+              <NavLink
+                to="/login"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className={getMobileAdminLinkClass}
+              >
+                <div className="mr-3 p-1.5 rounded-lg bg-white/10">
+                  <ShieldCheck className="w-5 h-5" strokeWidth={1.5} />
+                </div>
+                Accès Staff
+              </NavLink>
+            ) : (
+              <>
+                <NavLink
+                  to="/admin"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className={getMobileAdminLinkClass}
+                >
+                  <div className="mr-3 p-1.5 rounded-lg bg-white/10">
+                    <LayoutDashboard className="w-5 h-5" strokeWidth={1.5} />
+                  </div>
+                  Administration
+                </NavLink>
+                <button 
+                  onClick={() => {
+                    onLogout();
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="w-full px-4 py-3 rounded-xl font-medium flex items-center transition-all duration-300 text-red-200 hover:text-red-100 hover:bg-red-900/30 border border-transparent hover:border-red-500/30"
+                >
+                  <Power className="w-5 h-5 mr-3" strokeWidth={1.5} />
+                  Déconnexion
                 </button>
               </>
             )}
           </div>
         </div>
-      </div>
+      )}
     </header>
   );
 };

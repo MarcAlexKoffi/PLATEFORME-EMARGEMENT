@@ -7,7 +7,7 @@ import autoTable from 'jspdf-autotable';
 import pigierLogo from '../assets/logo_pigier.png';
 
 const AdminView = () => {
-  const { exams, signatures, majors, addExam, deleteExam, addMajor, deleteMajor, resetAllData, updateSignature, isConfirmationActive, toggleConfirmation } = useAttendance();
+  const { exams, signatures, majors, addExam, deleteExam, addMajor, deleteMajor, deleteSignature, resetAllData, updateSignature, isConfirmationActive, toggleConfirmation } = useAttendance();
   const [newExamForm, setNewExamForm] = useState({
     subject: '',
     semester: 'S1',
@@ -23,6 +23,9 @@ const AdminView = () => {
   
   const [showMajorDeleteModal, setShowMajorDeleteModal] = useState(false);
   const [majorToDelete, setMajorToDelete] = useState(null);
+
+  const [showSignatureDeleteModal, setShowSignatureDeleteModal] = useState(false);
+  const [signatureToDelete, setSignatureToDelete] = useState(null);
 
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
@@ -99,6 +102,21 @@ const AdminView = () => {
       setShowMajorDeleteModal(false);
       setMajorToDelete(null);
       setSuccessMessage("La filière a été supprimée avec succès.");
+      setShowSuccessModal(true);
+    }
+  };
+
+  const confirmDeleteSignature = (signature) => {
+    setSignatureToDelete(signature);
+    setShowSignatureDeleteModal(true);
+  };
+
+  const handleDeleteSignature = () => {
+    if (signatureToDelete) {
+      deleteSignature(signatureToDelete.id);
+      setShowSignatureDeleteModal(false);
+      setSignatureToDelete(null);
+      setSuccessMessage("L'émargement a été supprimé avec succès.");
       setShowSuccessModal(true);
     }
   };
@@ -635,6 +653,37 @@ const AdminView = () => {
         </div>
       </Modal>
 
+      {/* Modal de Confirmation de Suppression de Signature */}
+      <Modal
+        isOpen={showSignatureDeleteModal}
+        onClose={() => setShowSignatureDeleteModal(false)}
+        title="Confirmer la suppression"
+      >
+        <div className="flex flex-col space-y-4">
+          <div className="flex items-center text-amber-600 bg-amber-50 p-3 rounded-md">
+            <AlertTriangle className="w-5 h-5 mr-3 flex-shrink-0" />
+            <p className="text-sm font-medium">Cette action est irréversible.</p>
+          </div>
+          <p className="text-slate-600">
+            Êtes-vous sûr de vouloir supprimer l'émargement de <strong>{signatureToDelete?.name}</strong> pour l'épreuve <strong>{signatureToDelete?.examName}</strong> ?
+          </p>
+          <div className="flex justify-end space-x-3 pt-4">
+            <button
+              onClick={() => setShowSignatureDeleteModal(false)}
+              className="px-4 py-2 border border-slate-300 rounded-md text-slate-700 hover:bg-slate-50 font-medium transition-colors"
+            >
+              Annuler
+            </button>
+            <button
+              onClick={handleDeleteSignature}
+              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 font-medium shadow-sm transition-colors"
+            >
+              Supprimer
+            </button>
+          </div>
+        </div>
+      </Modal>
+
       {/* Modal Visualisation Signature */}
       <Modal
         isOpen={showSignatureModal}
@@ -882,13 +931,22 @@ const AdminView = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button
-                        onClick={() => handleEditClick(record)}
-                        className="text-indigo-600 hover:text-indigo-900 hover:bg-indigo-50 p-2 rounded-full transition-colors"
-                        title="Modifier l'entrée"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </button>
+                      <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() => handleEditClick(record)}
+                          className="text-indigo-600 hover:text-indigo-900 hover:bg-indigo-50 p-2 rounded-full transition-colors"
+                          title="Modifier l'entrée"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => confirmDeleteSignature(record)}
+                          className="text-red-600 hover:text-red-900 hover:bg-red-50 p-2 rounded-full transition-colors"
+                          title="Supprimer l'entrée"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
