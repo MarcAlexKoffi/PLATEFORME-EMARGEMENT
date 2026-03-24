@@ -172,14 +172,19 @@ const StudentView = () => {
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <Hash className="h-5 w-5 text-slate-400" strokeWidth={1.5} />
                 </div>
-                <input
-                  type="text"
+                <select
                   required
-                  className="pl-10 w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#003366]/20 focus:border-[#003366] transition-all duration-200 font-medium placeholder-slate-400"
-                  placeholder="Ex: Salle 1"
+                  className="pl-10 w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#003366]/20 focus:border-[#003366] transition-all duration-200 font-medium text-slate-700 appearance-none"
                   value={studentForm.tableNumber}
                   onChange={(e) => setStudentForm({ ...studentForm, tableNumber: e.target.value })}
-                />
+                >
+                  <option value="">Sélectionnez votre salle</option>
+                  <option value="Salle Virtuelle 1">Salle Virtuelle 1</option>
+                  <option value="Salle Virtuelle 2">Salle Virtuelle 2</option>
+                  <option value="Salle Virtuelle 3">Salle Virtuelle 3</option>
+                  <option value="Salle Virtuelle 4">Salle Virtuelle 4</option>
+                  <option value="Salle Virtuelle 5">Salle Virtuelle 5</option>
+                </select>
               </div>
             </div>
             <div className="relative">

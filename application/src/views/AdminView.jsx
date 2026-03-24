@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { List, Download, Calendar, Plus, Filter, BookOpen, Trash2, CheckCircle, AlertTriangle, Users, FileText, Search, RotateCcw, GraduationCap, Edit, Lock } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { List, Download, Calendar, Plus, Filter, BookOpen, Trash2, CheckCircle, AlertTriangle, Users, FileText, Search, RotateCcw, GraduationCap, Edit, Lock, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { useAttendance } from '../context/AttendanceContext';
 import Modal from '../components/Modal';
 import jsPDF from 'jspdf';
@@ -11,11 +11,14 @@ const AdminView = () => {
   const [newExamForm, setNewExamForm] = useState({
     subject: '',
     semester: 'S1',
-    session: 'Session Normale'
+    session: 'Session 1'
   });
   const [newMajorName, setNewMajorName] = useState('');
   const [adminFilter, setAdminFilter] = useState('all');
+  const [adminRoomFilter, setAdminRoomFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   // États pour les modales
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -46,6 +49,8 @@ const AdminView = () => {
     major: '',
     class: ''
   });
+  
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
   // Statistiques
   const totalStudents = new Set(signatures.map(s => s.matricule)).size;
@@ -61,7 +66,7 @@ const AdminView = () => {
       id: Date.now().toString()
     });
     
-    setNewExamForm({ subject: '', semester: 'S1', session: 'Session Normale' });
+    setNewExamForm({ subject: '', semester: 'S1', session: 'Session 1' });
     setSuccessMessage("L'épreuve a été créée avec succès !");
     setShowSuccessModal(true);
   };
@@ -121,8 +126,32 @@ const AdminView = () => {
     }
   };
 
-  const handleExportPDF = () => {
+  const resizeImage = (base64Str, maxWidth = 400) => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.src = base64Str;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const aspectRatio = img.height / img.width;
+        const newWidth = Math.min(img.width, maxWidth);
+        const newHeight = newWidth * aspectRatio;
+        
+        canvas.width = newWidth;
+        canvas.height = newHeight;
+        
+        ctx.drawImage(img, 0, 0, newWidth, newHeight);
+        resolve(canvas.toDataURL('image/png'));
+      };
+      img.onerror = () => resolve(base64Str);
+    });
+  };
+
+  const handleExportPDF = async () => {
     try {
+      setIsGeneratingPDF(true);
+      // await new Promise(resolve => setTimeout(resolve, 100)); // Allow UI to update
+      
       const doc = new jsPDF('landscape');
       const pageWidth = doc.internal.pageSize.width;
       const pageHeight = doc.internal.pageSize.height;
@@ -169,6 +198,10 @@ const AdminView = () => {
         const exam = exams.find(e => e.id === adminFilter);
         if (exam) filterText = `${exam.subject} (${exam.session}) - ${exam.semester}`;
       }
+
+      if (adminRoomFilter !== 'all') {
+        filterText += ` - ${adminRoomFilter}`;
+      }
       
       doc.setFont('helvetica', 'bold');
       doc.text("Épreuve : ", 14, yPos);
@@ -176,8 +209,25 @@ const AdminView = () => {
       doc.text(filterText, 35, yPos);
 
       // Données
-      const pdfSignatures = signatures.filter(s => adminFilter === 'all' || s.examId === adminFilter);
+      const pdfSignatures = signatures.filter(s => {
+        const matchesExam = adminFilter === 'all' || s.examId === adminFilter;
+        const matchesRoom = adminRoomFilter === 'all' || s.tableNumber === adminRoomFilter;
+        return matchesExam && matchesRoom;
+      });
       
+      // OPTIMISATION: Redimensionner les signatures avant de générer le PDF
+      const optimizedSignatureData = await Promise.all(
+        pdfSignatures.map(async (s) => {
+          if (!s.signatureUrl) return null;
+          try {
+            return await resizeImage(s.signatureUrl);
+          } catch (e) {
+            console.error("Erreur redimensionnement image", e);
+            return s.signatureUrl;
+          }
+        })
+      );
+
       // --- TABLEAU ---
       autoTable(doc, {
         startY: yPos + 8,
@@ -235,7 +285,7 @@ const AdminView = () => {
         },
         didDrawCell: (data) => {
           if (data.section === 'body' && data.column.index === 7) {
-            const signatureImg = pdfSignatures[data.row.index].signatureUrl;
+            const signatureImg = optimizedSignatureData[data.row.index];
             if (signatureImg) {
               try {
                 // Centrer l'image dans la cellule
@@ -250,7 +300,7 @@ const AdminView = () => {
                 const x = data.cell.x + (data.cell.width - imgWidth) / 2;
                 const y = data.cell.y + (data.cell.height - imgHeight) / 2;
 
-                doc.addImage(signatureImg, 'PNG', x, y, imgWidth, imgHeight);
+                doc.addImage(signatureImg, 'PNG', x, y, imgWidth, imgHeight, undefined, 'FAST');
               } catch (e) {
                 // Silencieux si pas d'image valide
               }
@@ -268,9 +318,11 @@ const AdminView = () => {
 
       doc.save(`Emargement_Pigier_${new Date().toISOString().slice(0,10)}.pdf`);
       setSuccessMessage("La feuille d'émargement a été générée avec succès.");
+      setIsGeneratingPDF(false);
       setShowSuccessModal(true);
     } catch (error) {
       console.error("Erreur PDF:", error);
+      setIsGeneratingPDF(false);
       alert("Une erreur est survenue lors de la génération du PDF. Vérifiez la console pour plus de détails.");
     }
   };
@@ -309,13 +361,36 @@ const AdminView = () => {
     setShowSignatureModal(true);
   };
 
-  // Filtrage pour l'affichage tableau
-  const displayedSignatures = signatures.filter(s => {
-    const matchesExam = adminFilter === 'all' || s.examId === adminFilter;
-    const matchesSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          s.matricule.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesExam && matchesSearch;
-  });
+  // Filtrage pour l'affichage tableau (optimisé avec useMemo)
+  const filteredSignatures = useMemo(() => {
+    return signatures.filter(s => {
+      const matchesExam = adminFilter === 'all' || s.examId === adminFilter;
+      const matchesRoom = adminRoomFilter === 'all' || s.tableNumber === adminRoomFilter;
+      const matchesSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                            s.matricule.toLowerCase().includes(searchTerm.toLowerCase());
+      return matchesExam && matchesRoom && matchesSearch;
+    });
+  }, [signatures, adminFilter, adminRoomFilter, searchTerm]);
+
+  // Réinitialiser la page quand les filtres changent
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [adminFilter, adminRoomFilter, searchTerm]);
+
+  // Pagination
+  const totalPages = Math.ceil(filteredSignatures.length / itemsPerPage);
+  const displayedSignatures = filteredSignatures.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage);
+    }
+  };
+
 
   return (
     <div className="space-y-8">
@@ -425,8 +500,8 @@ const AdminView = () => {
                     value={newExamForm.session} 
                     onChange={e => setNewExamForm({...newExamForm, session: e.target.value})}
                   >
-                    <option value="Session Normale">Session Normale</option>
-                    <option value="Rattrapage">Rattrapage</option>
+                    <option value="Session 1">Session 1</option>
+                    <option value="Session 2">Session 2</option>
                   </select>
                 </div>
               </div>
@@ -536,7 +611,7 @@ const AdminView = () => {
       </div>
 
       {/* 4. ZONE DE DANGER */}
-      <div className="bg-red-50 rounded-xl p-6 border border-red-200 flex flex-col sm:flex-row justify-between items-center gap-4">
+      {/* <div className="bg-red-50 rounded-xl p-6 border border-red-200 flex flex-col sm:flex-row justify-between items-center gap-4">
         <div>
           <h3 className="text-red-900 font-bold flex items-center">
             <AlertTriangle className="w-5 h-5 mr-2" />
@@ -553,7 +628,7 @@ const AdminView = () => {
           <RotateCcw className="w-4 h-4" />
           Réinitialiser l'application
         </button>
-      </div>
+      </div> */}
 
       {/* --- MODALES --- */}
 
@@ -850,6 +925,22 @@ const AdminView = () => {
               <Filter className="w-4 h-4 text-slate-400 mr-2 flex-shrink-0" />
               <select 
                 className="border-none focus:ring-0 text-sm text-slate-700 bg-transparent py-0 pl-0 outline-none w-full"
+                value={adminRoomFilter}
+                onChange={(e) => setAdminRoomFilter(e.target.value)}
+              >
+                <option value="all">Toutes les salles</option>
+                <option value="Salle Virtuelle 1">Salle Virtuelle 1</option>
+                <option value="Salle Virtuelle 2">Salle Virtuelle 2</option>
+                <option value="Salle Virtuelle 3">Salle Virtuelle 3</option>
+                <option value="Salle Virtuelle 4">Salle Virtuelle 4</option>
+                <option value="Salle Virtuelle 5">Salle Virtuelle 5</option>
+              </select>
+            </div>
+
+            <div className="flex items-center bg-white rounded-md border border-slate-300 px-3 py-2 shadow-sm w-full sm:w-auto">
+              <Filter className="w-4 h-4 text-slate-400 mr-2 flex-shrink-0" />
+              <select 
+                className="border-none focus:ring-0 text-sm text-slate-700 bg-transparent py-0 pl-0 outline-none w-full"
                 value={adminFilter}
                 onChange={(e) => setAdminFilter(e.target.value)}
               >
@@ -862,10 +953,20 @@ const AdminView = () => {
             
             <button 
               onClick={handleExportPDF}
-              className="flex items-center justify-center px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition shadow-sm text-sm w-full sm:w-auto whitespace-nowrap"
+              disabled={isGeneratingPDF}
+              className={`flex items-center justify-center px-4 py-2 ${isGeneratingPDF ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'} text-white rounded-md transition shadow-sm text-sm w-full sm:w-auto whitespace-nowrap`}
             >
-              <Download className="w-4 h-4 mr-2" />
-              PV (PDF)
+              {isGeneratingPDF ? (
+                <>
+                  <div className="w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Génération...
+                </>
+              ) : (
+                <>
+                  <Download className="w-4 h-4 mr-2" />
+                  PV (PDF)
+                </>
+              )}
             </button>
           </div>
         </div>
@@ -954,6 +1055,77 @@ const AdminView = () => {
             </table>
           )}
         </div>
+
+        {/* Pagination Controls */}
+        {filteredSignatures.length > 0 && (
+          <div className="flex items-center justify-between border-t border-slate-200 bg-white px-4 py-3 sm:px-6">
+            <div className="flex flex-1 justify-between sm:hidden">
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="relative inline-flex items-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Précédent
+              </button>
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="relative ml-3 inline-flex items-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Suivant
+              </button>
+            </div>
+            <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm text-slate-700">
+                  Affichage de <span className="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> à <span className="font-medium">{Math.min(currentPage * itemsPerPage, filteredSignatures.length)}</span> sur <span className="font-medium">{filteredSignatures.length}</span> résultats
+                </p>
+              </div>
+              <div>
+                <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+                  <button
+                    onClick={() => handlePageChange(1)}
+                    disabled={currentPage === 1}
+                    className="relative inline-flex items-center rounded-l-md px-2 py-2 text-slate-400 ring-1 ring-inset ring-slate-300 hover:bg-slate-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <span className="sr-only">Premier</span>
+                    <ChevronsLeft className="h-5 w-5" aria-hidden="true" />
+                  </button>
+                  <button
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="relative inline-flex items-center px-2 py-2 text-slate-400 ring-1 ring-inset ring-slate-300 hover:bg-slate-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <span className="sr-only">Précédent</span>
+                    <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+                  </button>
+                  
+                  {/* Page Info */}
+                  <span className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-slate-900 ring-1 ring-inset ring-slate-300 focus:outline-offset-0">
+                    Page {currentPage} sur {totalPages}
+                  </span>
+
+                  <button
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className="relative inline-flex items-center px-2 py-2 text-slate-400 ring-1 ring-inset ring-slate-300 hover:bg-slate-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <span className="sr-only">Suivant</span>
+                    <ChevronRight className="h-5 w-5" aria-hidden="true" />
+                  </button>
+                  <button
+                    onClick={() => handlePageChange(totalPages)}
+                    disabled={currentPage === totalPages}
+                    className="relative inline-flex items-center rounded-r-md px-2 py-2 text-slate-400 ring-1 ring-inset ring-slate-300 hover:bg-slate-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <span className="sr-only">Dernier</span>
+                    <ChevronsRight className="h-5 w-5" aria-hidden="true" />
+                  </button>
+                </nav>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
